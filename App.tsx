@@ -232,7 +232,7 @@ const App: React.FC = () => {
     const totalSteps = project.steps.length;
     if (totalSteps === 0) return 0;
     const completedStepsCount = project.steps.filter(step => 
-      step.tasks.length > 0 && step.tasks.every(t => t.isCompleted)
+      step.tasks && step.tasks.length > 0 && step.tasks.every(t => t.isCompleted)
     ).length;
     return Math.round((completedStepsCount / totalSteps) * 100);
   };
@@ -621,7 +621,8 @@ const App: React.FC = () => {
               <div className="space-y-6">
                 {selectedProject.steps.map((step, idx) => {
                   const isCurrentFocus = step.id === selectedProject.currentStepId;
-                  const isStepDone = step.tasks.length > 0 && step.tasks.every(t => t.isCompleted);
+                  const stepTasks = step.tasks || [];
+                  const isStepDone = stepTasks.length > 0 && stepTasks.every(t => t.isCompleted);
                   
                   return (
                     <div 
@@ -688,7 +689,7 @@ const App: React.FC = () => {
 
                           {/* タスク一覧 */}
                           <div className="space-y-3">
-                            {step.tasks.map(task => (
+                            {stepTasks.map(task => (
                               <div key={task.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-start gap-3">
                                   <button 
