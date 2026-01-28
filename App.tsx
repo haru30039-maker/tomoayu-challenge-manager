@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
@@ -73,9 +72,20 @@ const App: React.FC = () => {
       if (!response.ok) throw new Error("Sync failed");
       const data = await response.json();
       if (data) {
-        if (data.projects) setProjects(data.projects);
-        if (data.logs) setLogs(data.logs);
-        if (data.members) setMembers(data.members);
+        // Firebaseは空配列をnullとして保存するため、安全にチェック
+        if (data.projects && Array.isArray(data.projects)) {
+          setProjects(data.projects);
+        }
+        // logsがundefined/nullの場合は空配列をセット
+        if (data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs);
+        } else {
+          setLogs([]);
+        }
+        // membersがundefined/nullの場合はデフォルト値を維持
+        if (data.members && Array.isArray(data.members)) {
+          setMembers(data.members);
+        }
         setLastSyncTime(Date.now());
         showNotification("最新データを同期しました");
       } else {
