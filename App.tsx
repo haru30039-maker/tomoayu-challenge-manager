@@ -33,8 +33,8 @@ import { Project, Step, Task, ViewMode, UpdateLog } from './types';
 import { INITIAL_PROJECTS, MEMBER_NAMES } from './constants';
 import { getProjectInsights } from './geminiService';
 
-// クラウド同期用APIエンドポイント (JSONBlobを使用)
-const JSON_BLOB_API = 'https://jsonblob.com/api/jsonBlob';
+// Firebase Realtime Database URL
+const FIREBASE_DB_URL = 'https://tomoayu000-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 const App: React.FC = () => {
   // --- State ---
@@ -69,14 +69,18 @@ const App: React.FC = () => {
     if (!id) return;
     setIsSyncing(true);
     try {
-      const response = await fetch(`${JSON_BLOB_API}/${id}`);
+      const response = await fetch(`${FIREBASE_DB_URL}/sync/${id}.json`);
       if (!response.ok) throw new Error("Sync failed");
       const data = await response.json();
-      if (data.projects) setProjects(data.projects);
-      if (data.logs) setLogs(data.logs);
-      if (data.members) setMembers(data.members);
-      setLastSyncTime(Date.now());
-      showNotification("最新データを同期しました");
+      if (data) {
+        if (data.projects) setProjects(data.projects);
+        if (data.logs) setLogs(data.logs);
+        if (data.members) setMembers(data.members);
+        setLastSyncTime(Date.now());
+        showNotification("最新データを同期しました");
+      } else {
+        showNotification("データが見つかりません。新しいIDを作成してください");
+      }
     } catch (error) {
       console.error(error);
       showNotification("同期に失敗しました。IDを確認してください");
@@ -89,8 +93,8 @@ const App: React.FC = () => {
     if (!id) return;
     setIsSyncing(true);
     try {
-      const data = { projects, logs, members };
-      const response = await fetch(`${JSON_BLOB_API}/${id}`, {
+      const data = { projects, logs, members, updatedAt: Date.now() };
+      const response = await fetch(`${FIREBASE_DB_URL}/sync/${id}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -123,20 +127,20 @@ const App: React.FC = () => {
   const createNewCloudSync = async () => {
     setIsSyncing(true);
     try {
-      const data = { projects, logs, members };
-      const response = await fetch(JSON_BLOB_API, {
-        method: 'POST',
+      // ランダムなIDを生成
+      const newId = Math.random().toString(36).substring(2, 10);
+      const data = { projects, logs, members, updatedAt: Date.now() };
+      const response = await fetch(`${FIREBASE_DB_URL}/sync/${newId}.json`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      const location = response.headers.get('Location');
-      if (location) {
-        const id = location.split('/').pop() || "";
-        setCloudSyncId(id);
-        setLastSyncTime(Date.now());
-        showNotification("同期を開始しました！IDをメンバーに共有してください");
-      }
+      if (!response.ok) throw new Error("Create failed");
+      setCloudSyncId(newId);
+      setLastSyncTime(Date.now());
+      showNotification("同期を開始しました！IDをメンバーに共有してください");
     } catch (error) {
+      console.error(error);
       showNotification("IDの作成に失敗しました");
     } finally {
       setIsSyncing(false);
